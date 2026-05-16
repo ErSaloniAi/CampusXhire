@@ -67,7 +67,8 @@ def student_register():
     step = session.get("step", "email")
     errors = []
 
-    if request.method == "POST":
+    if request.method == "GET":
+        session.setdefault("step", "email")
 
         # ================= STEP 1 : SEND OTP =================
         if "send_otp" in request.form:
@@ -112,7 +113,7 @@ def student_register():
             )
 
         # ================= STEP 2 : VERIFY OTP =================
-        if "verify_otp" in request.form:
+        if "verify_otp" in request.form and session.get("otp") and session.get("email"):
             user_otp = request.form.get("otp", "").strip()
 
             if user_otp != session.get("otp"):
