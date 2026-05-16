@@ -5,12 +5,14 @@ from app.extensions.db import mail
 
 def safe_send(msg):
     try:
-        mail.send(msg)
+        with mail.connect() as conn:
+            conn.send(msg)
+
         print(f"Email sent to {msg.recipients}")
         return True
 
     except Exception as e:
-        print(f"Mail Error: {e}")
+        print(f"MAIL ERROR: {e}")
         return False
 
 
