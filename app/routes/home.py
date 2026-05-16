@@ -5,8 +5,8 @@ home_bp = Blueprint("home", __name__)
 
 @home_bp.route("/home-page", methods=["GET", "POST"])
 def home():
-    return render_template('Home.html')
+    return render_template('Start/Home.html')
 
 @home_bp.route("/login")
 def login():
-    return render_template("start/first.html")  
+    return render_template("Start/first.html")  
