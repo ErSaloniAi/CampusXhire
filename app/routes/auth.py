@@ -25,7 +25,7 @@ def admin_dashboard1():
 
 @auth_bp.route("/")
 def home():
-    return render_template("start/Home.html")
+    return render_template("Start/Home.html")
 
 
 @auth_bp.route("/admin/login", methods=["GET", "POST"])
