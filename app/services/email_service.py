@@ -1,19 +1,18 @@
 from flask_mail import Message
 from flask import render_template, url_for
 from app.extensions.db import mail
+import threading
 
 
-def safe_send(msg):
+def _send_async(msg):
     try:
         with mail.connect() as conn:
             conn.send(msg)
 
         print(f"Email sent to {msg.recipients}")
-        return True
 
     except Exception as e:
         print(f"MAIL ERROR: {e}")
-        return False
 
 
 def send_welcome_email(to_email, name):
@@ -27,7 +26,11 @@ def send_welcome_email(to_email, name):
         name=name
     )
 
-    return safe_send(msg)
+    threading.Thread(
+        target=_send_async,
+        args=(msg,),
+        daemon=True
+    ).start()
 
 
 def send_otp_email(email, otp):
@@ -41,7 +44,11 @@ def send_otp_email(email, otp):
         otp=otp
     )
 
-    return safe_send(msg)
+    threading.Thread(
+        target=_send_async,
+        args=(msg,),
+        daemon=True
+    ).start()
 
 
 def send_job_mail(student, job):
@@ -63,7 +70,11 @@ def send_job_mail(student, job):
         apply_link=apply_link
     )
 
-    return safe_send(msg)
+    threading.Thread(
+        target=_send_async,
+        args=(msg,),
+        daemon=True
+    ).start()
 
 
 def send_approval_email(
@@ -92,4 +103,8 @@ def send_approval_email(
         status=status
     )
 
-    return safe_send(msg)
+    threading.Thread(
+        target=_send_async,
+        args=(msg,),
+        daemon=True
+    ).start()
