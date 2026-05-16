@@ -6,14 +6,12 @@ from app.extensions.db import mail
 def safe_send(msg):
     try:
         mail.send(msg)
-        print(f"Email sent successfully to {msg.recipients}")
+        print(f"Email sent to {msg.recipients}")
+        return True
 
     except Exception as e:
-        print(f"Email sending failed: {str(e)}")
-        # Don't crash the app
+        print(f"Mail Error: {e}")
         return False
-
-    return True
 
 
 def send_welcome_email(to_email, name):
