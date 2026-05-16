@@ -94,9 +94,14 @@ def student_register():
                 )
 
             otp = str(random.randint(100000, 999999))
+
             session["otp"] = otp
             session["email"] = email
             session["step"] = "otp"
+            
+            session.modified = True
+            
+            print("OTP GENERATED:", otp)
 
             send_otp_email(email, otp)
 
@@ -118,8 +123,12 @@ def student_register():
                     colleges=colleges
                 )
 
-            session.pop("otp")      # ✅ clear OTP
+            session.pop("otp", None)
             session["step"] = "details"
+            
+            session.modified = True
+            
+            print("SESSION EMAIL:", session.get("email"))
 
             return render_template(
                 "student/student_auth/student_register.html",
@@ -129,7 +138,7 @@ def student_register():
             )
 
         # ================= STEP 3 : REGISTER =================
-    if "register" in request.form:
+    elif "register" in request.form:
 
         full_name = request.form.get("full_name", "").strip()
         mobile_no = request.form.get("mobile_no", "").strip()
