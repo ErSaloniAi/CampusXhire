@@ -2,6 +2,20 @@ from flask_mail import Message
 from flask import render_template, url_for
 from app.extensions.db import mail
 
+
+def safe_send(msg):
+    try:
+        mail.send(msg)
+        print(f"Email sent successfully to {msg.recipients}")
+
+    except Exception as e:
+        print(f"Email sending failed: {str(e)}")
+        # Don't crash the app
+        return False
+
+    return True
+
+
 def send_welcome_email(to_email, name):
     msg = Message(
         subject="Welcome to CampusXHire 🎓",
@@ -12,17 +26,22 @@ def send_welcome_email(to_email, name):
         "email/welcome.html",
         name=name
     )
-    
-    mail.send(msg)
-    
+
+    return safe_send(msg)
+
+
 def send_otp_email(email, otp):
     msg = Message(
         subject="CampusXHire OTP Verification",
         recipients=[email]
     )
 
-    msg.html = render_template("email/otp.html", otp=otp)
-    mail.send(msg)
+    msg.html = render_template(
+        "email/otp.html",
+        otp=otp
+    )
+
+    return safe_send(msg)
 
 
 def send_job_mail(student, job):
@@ -31,23 +50,40 @@ def send_job_mail(student, job):
         recipients=[student.email]
     )
 
-    apply_link = url_for("student.job_details", job_id=job.id, _external=True)
+    apply_link = url_for(
+        "student.job_details",
+        job_id=job.id,
+        _external=True
+    )
+
     msg.html = render_template(
         "student/job_match.html",
         student=student,
         job=job,
         apply_link=apply_link
     )
-    mail.send(msg)
+
+    return safe_send(msg)
 
 
-def send_approval_email(student_email, student_name, job_title, company_name, status):
+def send_approval_email(
+    student_email,
+    student_name,
+    job_title,
+    company_name,
+    status
+):
     msg = Message(
         subject=f"Application {status}: {job_title}",
         recipients=[student_email]
     )
 
-    template_name = "application_approved.html" if str(status).lower() == "approved" else "email/application_status.html"
+    template_name = (
+        "email/application_approved.html"
+        if str(status).lower() == "approved"
+        else "email/application_status.html"
+    )
+
     msg.html = render_template(
         template_name,
         student_name=student_name,
@@ -55,4 +91,5 @@ def send_approval_email(student_email, student_name, job_title, company_name, st
         company_name=company_name,
         status=status
     )
-    mail.send(msg)
+
+    return safe_send(msg)
