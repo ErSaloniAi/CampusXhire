@@ -41,19 +41,23 @@ def send_welcome_email(to_email, name):
     safe_send(msg)
 
 
+import os
+import resend
+
+
+resend.api_key = os.getenv("RESEND_API_KEY")
+
+
 def send_otp_email(email, otp):
 
-    msg = Message(
-        subject="CampusXHire OTP Verification",
-        recipients=[email]
-    )
+    resend.Emails.send({
+        "from": "CampusXHire <onboarding@resend.dev>",
+        "to": [email],
+        "subject": "CampusXHire OTP Verification",
+        "html": f"<h2>Your OTP is: {otp}</h2>"
+    })
 
-    msg.html = render_template(
-        "email/otp.html",
-        otp=otp
-    )
-
-    safe_send(msg)
+    print("OTP EMAIL SENT")
 
 
 def send_job_mail(student, job):
