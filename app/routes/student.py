@@ -43,9 +43,38 @@ def student_login():
             errors.append("Invalid email or password")
 
     return render_template("student/student_auth/student_login.html", errors=errors)
+    
 
+@student_bp.route("/seed-colleges")
+def seed_colleges():
 
-@student_bp.route("/student-register", methods=["GET", "POST"])
+    colleges = [
+        ("LJ Institute of Engineering and Technology", "Ahmedabad"),
+        ("GCET", "Anand"),
+        ("Nirma University", "Ahmedabad"),
+        ("VGEC", "Ahmedabad"),
+        ("DAIICT", "Gandhinagar"),
+        ("Marwadi University", "Rajkot")
+    ]
+
+    for name, city in colleges:
+
+        exists = EngineeringCollege.query.filter_by(
+            college_name=name
+        ).first()
+
+        if not exists:
+            db.session.add(
+                EngineeringCollege(
+                    college_name=name,
+                    city=city
+                )
+            )
+
+    db.session.commit()
+
+    return "Colleges inserted successfully"
+
 @student_bp.route("/student-register", methods=["GET", "POST"])
 def student_register():
 
@@ -375,48 +404,9 @@ def student_register():
         branches=engineering_branches,
         colleges=colleges
     )
-from flask import Blueprint
-...
-
-student_bp = Blueprint("student", __name__)
 
 
-# ADD HERE ↓↓↓
-@student_bp.route("/seed-colleges")
-def seed_colleges():
 
-    colleges = [
-        ("LJ Institute of Engineering and Technology", "Ahmedabad"),
-        ("GCET", "Anand"),
-        ("Nirma University", "Ahmedabad"),
-        ("VGEC", "Ahmedabad"),
-        ("DAIICT", "Gandhinagar"),
-        ("Marwadi University", "Rajkot")
-    ]
-
-    for name, city in colleges:
-
-        exists = EngineeringCollege.query.filter_by(
-            college_name=name
-        ).first()
-
-        if not exists:
-            db.session.add(
-                EngineeringCollege(
-                    college_name=name,
-                    city=city
-                )
-            )
-
-    db.session.commit()
-
-    return "Colleges inserted successfully"
-
-
-# Your existing route starts here ↓↓↓
-@student_bp.route("/student-register", methods=["GET", "POST"])
-def student_register():
-    ...
 @student_bp.route("/student-dashboard")
 def student_dashboard():
     if "student_id" not in session:
