@@ -46,9 +46,10 @@ def student_login():
 
 
 @student_bp.route("/student-register", methods=["GET", "POST"])
+@student_bp.route("/student-register", methods=["GET", "POST"])
 def student_register():
 
-    # 🔹 Load colleges always
+    # Always load colleges
     colleges = EngineeringCollege.query.order_by(
         EngineeringCollege.college_name
     ).all()
@@ -64,47 +65,72 @@ def student_register():
         "Cyber Security"
     ]
 
+    # Default screen
+    if request.method == "GET":
+        session["step"] = "email"
+
     step = session.get("step", "email")
     errors = []
 
-    if request.method == "GET":
-        session.setdefault("step", "email")
+    # ================= POST =================
+    if request.method == "POST":
 
-        # ================= STEP 1 : SEND OTP =================
+        # ====================================================
+        # STEP 1 : STUDENT ENTERS EMAIL → OTP SENT
+        # ====================================================
         if "send_otp" in request.form:
-            email = request.form.get("email", "").strip()
 
-            if not email or not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-                errors.append("Enter a valid email")
+            email = request.form.get(
+                "email",
+                ""
+            ).strip().lower()
+
+            if not email or not re.match(
+                r"[^@]+@[^@]+\.[^@]+",
+                email
+            ):
+                errors.append(
+                    "Enter valid email"
+                )
+
+            elif Students.query.filter_by(
+                email=email
+            ).first():
+
+                errors.append(
+                    "Email already registered"
+                )
+
+            if errors:
                 return render_template(
                     "student/student_auth/student_register.html",
                     step="email",
                     errors=errors,
                     colleges=colleges
                 )
-            print("EMAIL FROM SESSION:", email)
 
-            # ❗ Prevent duplicate registration
-            if Students.query.filter_by(email=email).first():
-                errors.append("Email already registered")
-                return render_template(
-                    "student/student_auth/student_register.html",
-                    step="email",
-                    errors=errors,
-                    colleges=colleges
+            otp = str(
+                random.randint(
+                    100000,
+                    999999
                 )
-
-            otp = str(random.randint(100000, 999999))
+            )
 
             session["otp"] = otp
             session["email"] = email
             session["step"] = "otp"
-            
-            session.modified = True
-            
-            print("OTP GENERATED:", otp)
 
-            send_otp_email(email, otp)
+            session.modified = True
+
+            print(
+                "OTP GENERATED:",
+                otp
+            )
+
+            send_otp_email(
+                email,
+                otp
+            )
 
             return render_template(
                 "student/student_auth/student_register.html",
@@ -112,24 +138,48 @@ def student_register():
                 colleges=colleges
             )
 
-        # ================= STEP 2 : VERIFY OTP =================
-        if "verify_otp" in request.form and session.get("otp") and session.get("email"):
-            user_otp = request.form.get("otp", "").strip()
+        # ====================================================
+        # STEP 2 : VERIFY OTP
+        # ====================================================
+        elif "verify_otp" in request.form:
 
-            if user_otp != session.get("otp"):
+            user_otp = request.form.get(
+                "otp",
+                ""
+            ).strip()
+
+            saved_otp = session.get(
+                "otp"
+            )
+
+            print(
+                "USER OTP:",
+                user_otp
+            )
+            print(
+                "SESSION OTP:",
+                saved_otp
+            )
+
+            if not saved_otp or user_otp != saved_otp:
+
                 return render_template(
                     "student/student_auth/student_register.html",
                     step="otp",
-                    errors=["Invalid OTP"],
+                    errors=[
+                        "Invalid OTP"
+                    ],
                     colleges=colleges
                 )
 
-            session.pop("otp", None)
+            session.pop(
+                "otp",
+                None
+            )
+
             session["step"] = "details"
-            
+
             session.modified = True
-            
-            print("SESSION EMAIL:", session.get("email"))
 
             return render_template(
                 "student/student_auth/student_register.html",
@@ -138,121 +188,193 @@ def student_register():
                 colleges=colleges
             )
 
-        # ================= STEP 3 : REGISTER =================
-    elif "register" in request.form:
+        # ====================================================
+        # STEP 3 : SAVE STUDENT + LOGIN
+        # ====================================================
+        elif "register" in request.form:
 
-        full_name = request.form.get("full_name", "").strip()
-        mobile_no = request.form.get("mobile_no", "").strip()
-        password = request.form.get("password", "")
-        field = request.form.get("field")
-        specialization = request.form.get("specialization")
-        college_id = request.form.get("college_id")
-        start_year = request.form.get("start_year")
-        end_year = request.form.get("end_year")
-
-        # ✅ get skills as list from form
-        skills_list = request.form.getlist("skills")
-
-        email = session.get("email")
-
-        # ---------- VALIDATIONS ----------
-        if not full_name:
-            errors.append("Full name is required")
-
-        if not mobile_no.isdigit() or len(mobile_no) != 10:
-            errors.append("Mobile number must be 10 digits")
-
-        password_pattern = re.compile(
-            r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$'
-        )
-
-        if not password_pattern.match(password):
-            errors.append(
-                "Password must contain uppercase, lowercase, number & special character"
+            email = session.get(
+                "email"
             )
 
-        if not college_id:
-            errors.append("Please select a college")
+            if not email:
+                session.clear()
 
-        if errors:
-            return render_template(
-                "student/student_auth/student_register.html",
-                step="details",
-                errors=errors,
-                branches=engineering_branches,
-                colleges=colleges,
-                selected_skills=skills_list
-            )
-
-        # ---------- SAVE ----------
-        if not email:
-            session.clear()
-            return redirect(url_for("student.student_register"))
-        slug = slugify(f"{full_name}-{mobile_no}")
-
-        try:
-            # ✅ FIRST create student (WITHOUT skills)
-            student = Students(
-                full_name=full_name,
-                email=email,
-                mobile_no=mobile_no,
-                password=generate_password_hash(password),
-                field=field,
-                specialization=specialization,
-                college_id=int(college_id),
-                start_year=start_year,
-                end_year=end_year,
-                slug=slug
-            )
-
-            db.session.add(student)
-            db.session.flush()   # 🔥 gets student.id before commit
-
-            # ✅ NOW add skills properly (relationship-safe)
-            for s in skills_list:
-                if s.strip():
-                    skill = Skills(
-                        name=s.strip(),
-                        student_id=student.id
+                return redirect(
+                    url_for(
+                        "student.student_register"
                     )
-                    db.session.add(skill)
+                )
 
-            db.session.commit()
+            full_name = request.form.get(
+                "full_name",
+                ""
+            ).strip()
 
-            print("✅ STUDENT SAVED:", student.id)
+            mobile_no = request.form.get(
+                "mobile_no",
+                ""
+            ).strip()
 
-            send_welcome_email(email, full_name)
+            password = request.form.get(
+                "password",
+                ""
+            )
 
-            # Clear temporary registration keys but keep the user logged in
-            session.pop("otp", None)
-            session.pop("email", None)
-            session.pop("step", None)
+            field = request.form.get(
+                "field"
+            )
 
-            session["student_id"] = student.id
-            session["full_name"] = student.full_name
+            specialization = request.form.get(
+                "specialization"
+            )
 
-            return redirect(url_for("student.student_dashboard"))
+            college_id = request.form.get(
+                "college_id"
+            )
 
-        except IntegrityError as e:
-            db.session.rollback()
-            print("❌ DB ERROR:", e.orig)
+            start_year = request.form.get(
+                "start_year"
+            )
 
-        return render_template(
-            "student/student_auth/student_register.html",
-            step="details",
-            errors=["Email / mobile already exists or invalid college"],
-            branches=engineering_branches,
-            colleges=colleges
-        )
+            end_year = request.form.get(
+                "end_year"
+            )
 
-        # ================= GET / FALLBACK =================
+            skills_list = request.form.getlist(
+                "skills"
+            )
+
+            # ---------- VALIDATION ----------
+            if not full_name:
+                errors.append(
+                    "Full name required"
+                )
+
+            if (
+                not mobile_no.isdigit()
+                or len(mobile_no) != 10
+            ):
+                errors.append(
+                    "Enter valid mobile number"
+                )
+
+            password_pattern = re.compile(
+                r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$'
+            )
+
+            if not password_pattern.match(
+                password
+            ):
+                errors.append(
+                    "Weak password"
+                )
+
+            if errors:
+
+                return render_template(
+                    "student/student_auth/student_register.html",
+                    step="details",
+                    errors=errors,
+                    branches=engineering_branches,
+                    colleges=colleges
+                )
+
+            try:
+
+                slug = slugify(
+                    f"{full_name}-{mobile_no}"
+                )
+
+                student = Students(
+                    full_name=full_name,
+                    email=email,
+                    mobile_no=mobile_no,
+                    password=generate_password_hash(
+                        password
+                    ),
+                    field=field,
+                    specialization=specialization,
+                    college_id=int(
+                        college_id
+                    ),
+                    start_year=start_year,
+                    end_year=end_year,
+                    slug=slug
+                )
+
+                db.session.add(
+                    student
+                )
+
+                db.session.flush()
+
+                for s in skills_list:
+
+                    if s.strip():
+
+                        db.session.add(
+                            Skills(
+                                name=s.strip(),
+                                student_id=student.id
+                            )
+                        )
+
+                db.session.commit()
+
+                print(
+                    "STUDENT SAVED:",
+                    student.id
+                )
+
+                send_welcome_email(
+                    email,
+                    full_name
+                )
+
+                # Login
+                session.clear()
+
+                session[
+                    "student_id"
+                ] = student.id
+
+                session[
+                    "full_name"
+                ] = student.full_name
+
+                return redirect(
+                    url_for(
+                        "student.student_dashboard"
+                    )
+                )
+
+            except IntegrityError as e:
+
+                db.session.rollback()
+
+                print(
+                    "DB ERROR:",
+                    e
+                )
+
+                return render_template(
+                    "student/student_auth/student_register.html",
+                    step="details",
+                    errors=[
+                        "Registration failed"
+                    ],
+                    branches=engineering_branches,
+                    colleges=colleges
+                )
+
+    # ================= DEFAULT =================
     return render_template(
-            "student/student_auth/student_register.html",
-            step=step,
-            branches=engineering_branches,
-            colleges=colleges
-        )
-
+        "student/student_auth/student_register.html",
+        step=step,
+        branches=engineering_branches,
+        colleges=colleges
+    )
 @student_bp.route("/student-dashboard")
 def student_dashboard():
     if "student_id" not in session:
