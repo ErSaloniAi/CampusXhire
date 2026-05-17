@@ -1,21 +1,33 @@
 from flask_mail import Message
-from flask import render_template, url_for
+from flask import render_template, url_for, current_app
 from app.extensions.db import mail
 import threading
 
 
-def _send_async(msg):
+def _send_async(app, msg):
     try:
-        with mail.connect() as conn:
-            conn.send(msg)
+        with app.app_context():
+            with mail.connect() as conn:
+                conn.send(msg)
 
-        print(f"Email sent to {msg.recipients}")
+        print("EMAIL SENT")
 
     except Exception as e:
-        print(f"MAIL ERROR: {e}")
+        print("MAIL ERROR:", e)
+
+
+def safe_send(msg):
+    app = current_app._get_current_object()
+
+    threading.Thread(
+        target=_send_async,
+        args=(app, msg),
+        daemon=True
+    ).start()
 
 
 def send_welcome_email(to_email, name):
+
     msg = Message(
         subject="Welcome to CampusXHire 🎓",
         recipients=[to_email]
@@ -26,14 +38,11 @@ def send_welcome_email(to_email, name):
         name=name
     )
 
-    threading.Thread(
-        target=_send_async,
-        args=(msg,),
-        daemon=True
-    ).start()
+    safe_send(msg)
 
 
 def send_otp_email(email, otp):
+
     msg = Message(
         subject="CampusXHire OTP Verification",
         recipients=[email]
@@ -44,14 +53,11 @@ def send_otp_email(email, otp):
         otp=otp
     )
 
-    threading.Thread(
-        target=_send_async,
-        args=(msg,),
-        daemon=True
-    ).start()
+    safe_send(msg)
 
 
 def send_job_mail(student, job):
+
     msg = Message(
         subject=f"Job Application Received: {job.job_title}",
         recipients=[student.email]
@@ -70,11 +76,7 @@ def send_job_mail(student, job):
         apply_link=apply_link
     )
 
-    threading.Thread(
-        target=_send_async,
-        args=(msg,),
-        daemon=True
-    ).start()
+    safe_send(msg)
 
 
 def send_approval_email(
@@ -84,6 +86,7 @@ def send_approval_email(
     company_name,
     status
 ):
+
     msg = Message(
         subject=f"Application {status}: {job_title}",
         recipients=[student_email]
@@ -103,8 +106,4 @@ def send_approval_email(
         status=status
     )
 
-    threading.Thread(
-        target=_send_async,
-        args=(msg,),
-        daemon=True
-    ).start()
+    safe_send(msg)
