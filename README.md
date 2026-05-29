@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # CampusXHire (Flask Web App) 🚀
 
 
@@ -273,7 +272,7 @@ This ensures proper SQLAlchemy relationship handling.
 
 ## 🚀 Deployment
 
-For production deployment, use:
+For production deployment, use:https://web-production-e0223.up.railway.app/
 
 ### Linux
 
@@ -316,4 +315,4 @@ This project is licensed under the **MIT License**.
 ---
 
 ⭐ If you like this project, don't forget to star the repository.
->>>>>>> b023fec76e75c42427dcf036c1095c4f5b566ffd
+
