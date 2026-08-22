@@ -302,11 +302,7 @@ Contributions are welcome!
 
 **Saloni Gorsiya**  
 Computer Engineering Student  
-**Jehan Musabji**
-Computer Engineering Student 
-**Yash Oganja**
-Computer Engineering Student 
----
+
 
 ## 📜 License
 
